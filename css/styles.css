@@ -69,7 +69,7 @@ canvas { max-width: 100%; height: auto; display: block; }
 .login .logo { font-size: clamp(76px, 11vw, 150px); }
 .lede { display: flex; align-items: center; gap: 14px; }
 .tagline { max-width: 40ch; color: var(--ink2); font-size: 12.5px; line-height: 1.8; }
-.login-form { display: flex; flex-direction: column; gap: 10px; width: min(100%, 340px); margin-top: 8px; }
+.login-form { display: flex; flex-direction: column; gap: 10px; width: min(100%, 340px); margin-top: 22px; }
 .field { display: flex; flex-direction: column; gap: 6px; text-align: left; }
 .field label { font-size: 9.5px; letter-spacing: .3em; text-transform: uppercase; color: var(--ink3); }
 .field input, .field textarea, .field select { background: rgba(241, 233, 223, .05); border: 1px solid var(--line2); border-radius: var(--radius); padding: 11px 13px; transition: border-color .3s, box-shadow .3s; width: 100%; }
