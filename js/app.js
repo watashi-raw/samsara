@@ -2,7 +2,8 @@
 import { ADMIN_EMAIL } from './config.js';
 import { supabaseStore, demoStore, sampleEntries } from './db.js';
 import * as D from './dates.js';
-import { phaseOfKey, phaseInfo, phaseIndex, illumination, ageOf, moonSVG, moonHalftone, moonAscii, nextEvent, lunarBounds, flowerCluster, PHASES } from './moon.js';
+import { phaseOfKey, phaseInfo, phaseIndex, illumination, ageOf, moonSVG, nextEvent, lunarBounds, PHASES } from './moon.js';
+import { moonArt, orchidArt, cycleRing, photoArt } from './art.js';
 import { icon, ICON_KEYS } from './icons.js';
 import { CATEGORIES, CATEGORY_MAP, FLOW, FLOW_LEVEL, DEFAULT_CATALOG } from './catalog.js';
 import { analyze, cycleInfo, menstrualBounds, PHASE_LABEL, PHASE_ORDER } from './cycle.js';
@@ -12,10 +13,10 @@ const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const state = {
   store: null, session: null, entries: new Map(), catalog: [], analysis: analyze([]),
-  view: 'today', calMode: 'month', calRef: D.todayKey(), chartMode: 'cycle', chartRef: D.todayKey(), layer: 'mood',
+  view: 'calendar', calMode: 'month', calRef: D.todayKey(), chartMode: 'cycle', chartRef: D.todayKey(), layer: 'mood',
   draft: null, settingsCat: 'mood', pickIcon: 'dot',
 };
-const TABS = [['today', 'Hoy', 'moon'], ['calendar', 'Calendario', 'calendar'], ['charts', 'Stats', 'chart'], ['journal', 'Diario', 'note'], ['settings', 'Setup', 'settings']];
+const TABS = [['calendar', 'Calendario'], ['charts', 'Stats'], ['journal', 'Diario'], ['settings', 'Setup']];
 const LAYERS = [['mood', 'Mood'], ['sex', 'Seggs'], ['symptoms', 'Síntomas'], ['energy', 'Energy'], ['activities', 'Qué hice']];
 const TEST_MARK = '[prueba]';
 const safeLS = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch { } } };
@@ -50,30 +51,36 @@ function renderAsciiBg() {
   }
   $('#ascii-bg').textContent = lines.join('\n');
 }
-let asciiTimer = null;
-function startAsciiMoon() {
-  const el = $('#ascii-moon'); const p = phaseOfKey(D.todayKey()); let t = 0;
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const draw = () => { el.textContent = moonAscii(p, 44, 22, t++); };
-  draw(); clearInterval(asciiTimer);
-  if (!reduce) asciiTimer = setInterval(draw, 160);
+let artCache = {};
+const PHOTOS = {
+  hero: { src: 'img/orchid-black.jpg', width: 1000, seed: 3, stretch: 1.1, cell: 8, asciiFrom: 0.05, asciiTo: 0.95, dir: 'x' },
+  single: { src: 'img/orchid-single.jpg', width: 760, key: true, seed: 5, stretch: 0.3, cell: 6, asciiFrom: 0, asciiTo: 0.28, dir: 'y', boost: 1.05 },
+  magenta: { src: 'img/orchid-magenta.jpg', width: 900, seed: 7, stretch: 1.2, cell: 7, asciiFrom: 0.9, asciiTo: 0.05, dir: 'y' },
+  ascii: { src: 'img/orchid-single.jpg', width: 760, key: true, seed: 11, stretch: 0.45, cell: 6, asciiFrom: 1, asciiTo: 1, dir: 'y', boost: 1.3, under: 0.42, glow: true },
+  spotted: { src: 'img/orchid-spotted.jpg', width: 900, seed: 9, stretch: 1, cell: 7, asciiFrom: 0.2, asciiTo: 0.9, dir: 'x' },
+};
+async function photoInto(sel, key, fallback) {
+  const el = $(sel); if (!el) return;
+  try {
+    artCache[key] = artCache[key] || await photoArt(PHOTOS[key].src, PHOTOS[key]);
+    if (!el.isConnected) return;
+    const c = artCache[key].cloneNode(); c.getContext('2d').drawImage(artCache[key], 0, 0); el.replaceWith(c);
+  } catch (e) { if (fallback) orchidInto(sel, ...fallback); }
 }
-function stopAsciiMoon() { clearInterval(asciiTimer); asciiTimer = null; }
-const FLORA = flowerCluster(320);
+function orchidInto(sel, size, seed, cell) { const el = $(sel); if (!el) return; const key = `${size}-${seed}-${cell}`; artCache[key] = artCache[key] || orchidArt(size, seed, cell); const c = artCache[key].cloneNode(); c.getContext('2d').drawImage(artCache[key], 0, 0); el.replaceWith(c); }
 
 // ---------- arranque ----------
 async function boot() {
   renderAsciiBg(); let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(renderAsciiBg, 200); });
   installTooltips(document.body);
   renderTabs(); bindSheet();
-  $('#deco-login-1').innerHTML = FLORA; $('#deco-login-2').innerHTML = FLORA;
   if (location.hash === '#demo') { state.store = demoStore(); state.session = await state.store.getSession(); await enterApp(); return; }
   try { state.store = await supabaseStore(); } catch (e) { showLogin('No se pudo cargar la conexión con Supabase.'); return; }
   try { state.session = await state.store.getSession(); } catch { }
   if (state.session) await enterApp(); else showLogin();
 }
 function showLogin(msg = '') {
-  $('#app').hidden = true; $('#login').hidden = false; startAsciiMoon();
+  $('#app').hidden = true; $('#login').hidden = false; photoInto('#login-orchid', 'ascii', [560, 1, 7]); 
   const remembered = safeLS.get('samsara.email') || ADMIN_EMAIL;
   if (ADMIN_EMAIL) { $('#email-field').hidden = true; $('#email').required = false; }
   if (remembered) $('#email').value = remembered;
@@ -92,25 +99,26 @@ async function enterApp() {
     state.entries = new Map(entries.map(e => [e.day, e]));
     state.catalog = catalog && catalog.length ? catalog : DEFAULT_CATALOG;
   } catch (e) { showLogin(errorText(e)); return; }
-  refreshAnalysis(); stopAsciiMoon();
+  refreshAnalysis();
   $('#login').hidden = true; $('#app').hidden = false;
-  const p = phaseOfKey(D.todayKey());
-  $('#top-note').textContent = state.store.demo ? 'demo · datos de ejemplo' : `${phaseInfo(p).short} · día lunar ${Math.floor(ageOf(p)) + 1}`;
-  switchView('today');
+  $('#top-date').textContent = D.fmtLong(D.todayKey());
+  $('#top-note').textContent = state.store.demo ? 'demo · datos de ejemplo' : 'admin';
+  renderToday(); switchView('calendar');
 }
 
 // ---------- navegación ----------
 function renderTabs() {
-  $('#tabbar').innerHTML = TABS.map(([k, l, i]) => `<button class="tab" role="tab" data-view="${k}" aria-selected="false">${icon(i)}<span>${l}</span></button>`).join('');
+  $('#tabbar').innerHTML = TABS.map(([k, l], i) => `<button class="tab" role="tab" data-view="${k}" aria-selected="false"><span class="num">/0${i + 1}</span><span>${l}</span></button>`).join('');
   $('#tabbar').addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) switchView(b.dataset.view); });
 }
 function switchView(name) {
   state.view = name;
   $$('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === name)));
   $$('.view').forEach(v => v.classList.toggle('active', v.dataset.view === name));
-  render(); scrollTo({ top: 0, behavior: 'smooth' });
+  renderPanel();
 }
-function render() { ({ today: renderToday, calendar: renderCalendar, charts: renderCharts, journal: renderJournal, settings: renderSettings })[state.view](); }
+function renderPanel() { ({ calendar: renderCalendar, charts: renderCharts, journal: renderJournal, settings: renderSettings })[state.view](); }
+function render() { renderToday(); renderPanel(); }
 
 // ---------- periodos (mes / luna / ciclo) ----------
 function periodBounds(mode, ref) {
@@ -145,31 +153,41 @@ function summaryChips(e, cls = 'pill') {
   if (e.notes) chips.push(`<span class="${cls}">${icon('note')}nota</span>`);
   return chips.join('');
 }
+function dataRow(k, v, cls = '') { return `<div class="data-row ${cls}"><span class="k">${k}</span><span class="v">${v}</span></div>`; }
 function renderToday() {
   const k = D.todayKey(); const p = phaseOfKey(k); const info = phaseInfo(p); const ill = Math.round(illumination(p) * 100);
   const a = state.analysis; const ci = cycleInfo(a, k); const e = state.entries.get(k); const now = new Date();
   const full = nextEvent(now, 0.5), nw = nextEvent(now, 0);
+  const until = a.nextStart ? D.diffDays(k, a.nextStart) : null;
   let cycleText;
-  if (ci) {
-    const until = a.nextStart ? D.diffDays(k, a.nextStart) : null;
-    cycleText = `Día ${ci.day} de tu ciclo, fase ${PHASE_LABEL[ci.phase].toLowerCase()}. ` + (until != null ? (until > 0 ? `Tu próximo periodo cae aprox el ${D.fmtShort(a.nextStart)}, en ${until} días.` : until === 0 ? 'Tu periodo cae aprox hoy.' : `Tu periodo se esperaba hace ${-until} días; si ya llegó, márcalo en el check-in.`) : '');
-  } else cycleText = 'Todavía no hay periodos registrados. Marca el flujo en tu check-in y SAMSARA empieza a contar tus ciclos y a cruzarlos con la luna.';
-  $('#view-today').innerHTML = `<div class="today">
-    <div class="deco tl">${FLORA}</div><div class="deco br">${FLORA}</div>
-    <div class="eyebrow">hoy</div><div class="date">${D.fmtLong(k)}</div>
-    <div class="moon-stage">${moonHalftone(p, 300, 9)}</div>
-    <div class="phase-name">${info.label}</div>
-    <div class="phase-meta">${ill}% iluminada · día lunar ${Math.floor(ageOf(p)) + 1}</div>
+  if (ci) cycleText = (until != null ? (until > 0 ? `Tu próximo periodo cae aprox el ${D.fmtShort(a.nextStart)}, en ${until} días. ` : until === 0 ? 'Tu periodo cae aprox hoy. ' : `Tu periodo se esperaba hace ${-until} días; si ya llegó, márcalo en el check-in. `) : '') + `Luna llena el ${D.fmtShort(D.toKey(full))}, luna nueva el ${D.fmtShort(D.toKey(nw))}.`;
+  else cycleText = 'Todavía no hay periodos registrados. Marca el flujo en tu check-in y SAMSARA empieza a contar tus ciclos y a cruzarlos con la luna.';
+  const ring = cycleRing({ length: ci ? ci.length : 28, periodLength: ci ? (ci.cycle.length ? ci.cycle.periodLength : Math.max(ci.cycle.periodLength, a.avgPeriod)) : 5, day: ci ? ci.day : null, ovDay: ci ? ci.length - 14 : null, hasData: !!ci });
+  const [l1, ...rest] = info.label.split(' ');
+  const chipsOf = cat => { const v = e?.[cat]; const arr = Array.isArray(v) ? v : v ? [v] : []; return arr.map(x => `<i>${iconOf(cat, x)}${esc(labelOf(cat, x))}</i>`).join(''); };
+  const rows = [
+    dataRow('flujo', e?.flow && e.flow !== 'none' ? FLOW_MAP[e.flow].label : '—', 'hero'),
+    dataRow('libido', e?.libido != null ? `${e.libido} · ${LIBIDO[e.libido]}` : '—', 'hero'),
+    dataRow('seggs', e?.sex ? labelOf('sex', e.sex) : '—', 'hero'),
+    e?.pain != null ? dataRow('dolor', `${e.pain} / 5`) : '',
+    ...['mood', 'energy', 'symptoms', 'breast', 'activities', 'care', 'digestion'].map(c => chipsOf(c) ? dataRow(CATEGORY_MAP[c].label, chipsOf(c)) : ''),
+    ['discharge_status', 'discharge_touch', 'discharge_smell'].some(c => e?.[c]) ? dataRow('flujo vaginal', ['discharge_status', 'discharge_touch', 'discharge_smell'].filter(c => e?.[c]).map(c => `<i>${iconOf(c, e[c])}${esc(labelOf(c, e[c]))}</i>`).join('')) : '',
+    e?.sleep_hours != null ? dataRow('sueño', `${e.sleep_hours} h`) : '',
+    e?.notes ? dataRow('nota', esc(e.notes), 'note') : '',
+  ].join('');
+  $('#today').innerHTML = `
+    <div class="hero-head"><div><div class="eyebrow">/ hoy · ${D.fmtLong(k)}</div><h2 class="display">${l1}<br>${rest.join(' ')}</h2></div>
+      <div class="caption">${ill}% iluminada<br>día lunar ${Math.floor(ageOf(p)) + 1}</div></div>
+    <div class="ring-wrap">${ring}<div class="ring-center"><canvas id="moon-art"></canvas></div></div>
+    <div class="today-meta">${ci ? `<span class="pill-tag">fase ${PHASE_LABEL[ci.phase]}</span><span class="big">día ${ci.day}</span><span class="muted">de ${ci.length}</span>` : `<span class="pill-tag">sin ciclo aún</span>`}<span class="muted">· ciclo promedio ${a.avgLength} d</span></div>
     <p class="cycle-line">${cycleText}</p>
-    <div class="cta-wrap"><button class="btn primary" id="cta-today">${icon('plus')}${e ? 'Editar check-in' : 'Check-in de hoy'}</button></div>
-    <div class="summary">${summaryChips(e)}</div>
-    <div class="tiles">
-      <div class="tile"><div class="eyebrow">próximo periodo</div><div class="val">${a.nextStart ? D.fmtShort(a.nextStart) : '—'}</div><div class="sub">${a.nextStart ? 'aprox' : 'sin datos aún'}</div></div>
-      <div class="tile"><div class="eyebrow">ciclo promedio</div><div class="val">${a.avgLength} d</div><div class="sub">${a.complete.length ? `${a.complete.length} ciclos medidos` : 'valor por defecto'}</div></div>
-      <div class="tile"><div class="eyebrow">luna llena</div><div class="val">${D.fmtShort(D.toKey(full))}</div><div class="sub">en ${Math.max(0, Math.round((full - now) / 86400000))} días</div></div>
-      <div class="tile"><div class="eyebrow">luna nueva</div><div class="val">${D.fmtShort(D.toKey(nw))}</div><div class="sub">en ${Math.max(0, Math.round((nw - now) / 86400000))} días</div></div>
-    </div></div>`;
+    <div class="cta-wrap"><button class="btn primary" id="cta-today">${icon('plus')}${e ? 'Editar check-in' : 'Check-in de hoy'}</button>${e ? '<span class="eyebrow">check-in listo ✦</span>' : '<span class="eyebrow">nada registrado hoy</span>'}</div>
+    <div class="today-data">${rows}</div>
+    <div class="orchid-deco"><canvas id="today-orchid"></canvas></div>`;
   $('#cta-today').onclick = () => openSheet(k);
+  const key = 'moon-' + Math.round(p * 1000); artCache[key] = artCache[key] || moonArt(280, p, 6);
+  const mc = artCache[key].cloneNode(); mc.getContext('2d').drawImage(artCache[key], 0, 0); $('#moon-art').replaceWith(mc);
+  photoInto('#today-orchid', 'single', [360, 2, 6]);
 }
 
 // ---------- CALENDARIO ----------
@@ -249,12 +267,13 @@ function renderJournal() {
     const p = phaseOfKey(e.day); const ci = cycleInfo(state.analysis, e.day);
     return `<article class="entry" data-day="${e.day}">
       <div class="when">${moonSVG(p, 32)}<div class="d">${D.fmtShort(e.day)}</div></div>
-      <div><div class="title"><span>${D.fmtLong(e.day)}</span>${ci ? `<span class="mono muted">día ${ci.day} · ${PHASE_LABEL[ci.phase].toLowerCase()}</span>` : ''}</div>
+      <div><div class="title"><span class="t">${D.fmtLong(e.day)}</span>${ci ? `<span class="mono muted">día ${ci.day} · ${PHASE_LABEL[ci.phase].toLowerCase()}</span>` : ''}</div>
         <div class="chips">${summaryChips({ ...e, notes: null }, '')}</div>
         ${e.notes ? `<p class="note">${esc(e.notes)}</p>` : ''}</div></article>`;
   }).join('');
   $('#view-journal').innerHTML = `<div class="section"><div class="section-head"><h2>Diario</h2><span class="eyebrow">${list.length} días</span></div>
-    ${items || `<div class="deco sm" style="position:relative;margin:10px auto">${FLORA}</div><p class="chart-note">Tu diario está vacío. Empieza con el check-in de hoy.</p>`}</div>`;
+    ${items || `<div class="art-frame empty-art"><canvas id="journal-orchid"></canvas><span class="art-num">/03</span><span class="art-cap">Diario<br>vacío</span></div><p class="chart-note">Tu diario está vacío. Empieza con el check-in de hoy.</p>`}</div>`;
+  photoInto('#journal-orchid', 'magenta', [260, 3, 6]);
   $('#view-journal').onclick = e => { const it = e.target.closest('.entry'); if (it) openSheet(it.dataset.day); };
 }
 
@@ -285,7 +304,7 @@ function renderSettings() {
         <div class="field"><label for="new-emoji">Emoji (opcional)</label><input id="new-emoji" placeholder="✦" maxlength="4"></div>
         <button class="btn" id="btn-add">${icon('plus')}Agregar</button></div>
       <div class="icon-picker" id="icon-picker">${picker}</div></div>
-    <div class="card"><h3>Sobre SAMSARA</h3><p class="small" style="margin-top:10px">Las fases lunares se calculan localmente a partir del ciclo sinódico. Los ciclos menstruales se detectan cuando registras flujo light o mayor tras al menos diez días sin sangrado; la ovulación se estima catorce días antes del siguiente ciclo. Nada de esto sustituye una consulta médica.</p></div>
+    <div class="card"><h3>Sobre SAMSARA</h3><p class="small" style="margin-top:10px">Las fases lunares se calculan localmente a partir del ciclo sinódico. Los ciclos menstruales se detectan cuando registras flujo light o mayor tras al menos diez días sin sangrado; la ovulación se estima catorce días antes del siguiente ciclo. Nada de esto sustituye una consulta médica.</p><p class="small muted" style="margin:8px 0 0">Fotografías de orquídeas: domdomegg (CC BY 4.0), André Karwath (CC BY-SA 2.5), Jedesto (CC BY-SA 4.0) y Anne Jea. (CC BY-SA 4.0), vía Wikimedia Commons, intervenidas por SAMSARA.</p></div>
   </div>`;
   const v = $('#view-settings');
   $('#cat-select').onchange = e => { state.settingsCat = e.target.value; renderSettings(); };

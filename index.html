@@ -3,53 +3,61 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f3eedd">
+<meta name="theme-color" content="#1a1220">
 <title>SAMSARA</title>
 <meta name="description" content="Registro del ciclo menstrual, síntomas y luna.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Mono:wght@400;700&family=Instrument+Serif:ital@0;1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 <pre id="ascii-bg" class="ascii-bg" aria-hidden="true"></pre>
 <div id="grain" aria-hidden="true"></div>
+<div class="bg-photo" aria-hidden="true"></div>
 
 <!-- ============ PORTADA / ENTRADA ============ -->
-<section id="login" class="screen" hidden>
-  <div class="deco tl" id="deco-login-1"></div><div class="deco br" id="deco-login-2"></div>
-  <pre id="ascii-moon" class="ascii-moon" aria-hidden="true"></pre>
-  <h1 class="logo">Samsara</h1>
-  <p class="tagline">Tu ciclo, tu mood, tu luna. Un check-in al día y, al final del mes, el mapa completo de lo que sentiste y con quién.</p>
-  <form id="login-form" class="login-form" autocomplete="on">
-    <div class="field" id="email-field">
-      <label for="email">Correo</label>
-      <input id="email" name="email" type="email" autocomplete="username" required>
-    </div>
-    <div class="field">
-      <label for="password">Contraseña</label>
-      <input id="password" name="password" type="password" autocomplete="current-password" required>
-    </div>
-    <p class="form-error" id="login-error" aria-live="polite"></p>
-    <button class="btn primary" id="login-btn" type="submit">Entrar</button>
-  </form>
-  <a class="demo-note" href="#demo">ver demo con datos de ejemplo</a>
+<section id="login" class="screen login" hidden>
+  <div class="login-art" aria-hidden="true"><div class="login-photo"></div><div class="art-frame"><canvas id="login-orchid"></canvas><span class="art-num">/01</span><span class="art-cap">Orquídea<br>phalaenopsis</span></div></div>
+  <div class="login-body">
+    <div class="eyebrow">/ registro del ciclo</div>
+    <h1 class="logo">samsara</h1>
+    <div class="lede"><span class="rule"></span><span class="pill-tag">tu ciclo · tu mood · tu luna</span></div>
+    <p class="tagline">Un check-in al día y, al final del mes, el mapa completo de lo que sentiste, cuándo y con quién. Todo cruzado con la fase de la luna.</p>
+    <form id="login-form" class="login-form" autocomplete="on">
+      <div class="field" id="email-field">
+        <label for="email">Correo</label>
+        <input id="email" name="email" type="email" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="password">Contraseña</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+      </div>
+      <p class="form-error" id="login-error" aria-live="polite"></p>
+      <button class="btn primary" id="login-btn" type="submit">Entrar</button>
+    </form>
+    <a class="demo-note" href="#demo">ver demo con datos de ejemplo</a>
+  </div>
 </section>
 
 <!-- ============ APP ============ -->
 <div id="app" class="screen" hidden>
   <header class="topbar">
-    <span class="brand">Samsara</span>
-    <span class="eyebrow" id="top-note"></span>
+    <span class="logo brand">samsara</span>
+    <div class="top-meta"><span class="mono muted" id="top-date"></span><span class="pill-tag" id="top-note"></span></div>
   </header>
-  <main>
-    <section class="view" data-view="today" id="view-today"></section>
-    <section class="view" data-view="calendar" id="view-calendar"></section>
-    <section class="view" data-view="charts" id="view-charts"></section>
-    <section class="view" data-view="journal" id="view-journal"></section>
-    <section class="view" data-view="settings" id="view-settings"></section>
+  <main class="split">
+    <aside class="left" id="today"></aside>
+    <section class="right">
+      <nav class="tabs" id="tabbar" role="tablist" aria-label="Secciones"></nav>
+      <div id="panel">
+        <section class="view" data-view="calendar" id="view-calendar"></section>
+        <section class="view" data-view="charts" id="view-charts"></section>
+        <section class="view" data-view="journal" id="view-journal"></section>
+        <section class="view" data-view="settings" id="view-settings"></section>
+      </div>
+    </section>
   </main>
-  <nav class="tabbar" id="tabbar" role="tablist" aria-label="Secciones"></nav>
 </div>
 
 <div id="sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheet-title"></div>

@@ -32,6 +32,10 @@ js/db.js              acceso a Supabase y modo demo
 supabase/schema.sql   esquema + RLS + semilla
 ```
 
+## Créditos de imágenes
+
+Las fotografías de orquídeas en `img/` vienen de Wikimedia Commons y se usan con atribución: `orchid-black.jpg` por domdomegg (CC BY 4.0), `orchid-single.jpg` por André Karwath (CC BY-SA 2.5), `orchid-magenta.jpg` por Jedesto (CC BY-SA 4.0), `orchid-spotted.jpg` por Anne Jea. (CC BY-SA 4.0). La app las interviene en tiempo real (estirado en bandas y ASCII) con `js/art.js`.
+
 ## Cómo se calcula
 
 - **Luna:** ciclo sinódico de 29,53 días desde la luna nueva de referencia (6 ene 2000). Ocho fases.
